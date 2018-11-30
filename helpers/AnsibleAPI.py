@@ -7,7 +7,7 @@ from collections import namedtuple
 
 from ansible.cli import CLI
 from ansible.parsing.dataloader import DataLoader
-from ansible.inventory import Inventory
+from ansible.inventory.manager import InventoryManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.playbook import Playbook
 
@@ -15,7 +15,7 @@ from ansible.playbook.block import Block
 from ansible.playbook.play_context import PlayContext
 from ansible.utils.vars import load_extra_vars
 from ansible.utils.vars import load_options_vars
-from ansible.vars import VariableManager
+from ansible.vars.manager import VariableManager
 
 import optparse
 
@@ -28,11 +28,12 @@ def host_vars():
     parser.add_argument('--inventory_file', help='Inventory Filename', required=True)
     parser.add_argument('--host_name', help='Host or Group name', required=True)
     args= parser.parse_args()
-
-    variable_manager = VariableManager()
     loader = DataLoader()
 
-    inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=args.inventory_file)
+    inventory = InventoryManager(loader=loader, sources=args.inventory_file)
+    variable_manager = VariableManager(loader=loader, inventory=inventory)
+
+    # inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=args.inventory_file)
     result = None
     if args.host_name in variable_manager.__getstate__()['host_vars_files']:
         result = variable_manager.__getstate__()['host_vars_files'][args.host_name]
@@ -226,7 +227,7 @@ def list_tags():
     # variable_manager.options_vars = load_options_vars(options)
 
     # create the inventory, and filter it based on the subset specified (if any)
-    inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=inventory_path)
+    inventory = InventoryManager(loader=loader, sources=inventory_path)
     variable_manager.set_inventory(inventory)
 
     # (which is not returned in list_hosts()) is taken into account for
